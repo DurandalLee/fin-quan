@@ -104,8 +104,7 @@ class DecoderLayer(nn.Module, ABC):
         self.layer_norm3 = nn.LayerNorm(data_dim)
 
     def forward(self, encoder_output, decoder_input, mask):
-        decoder_input.masked_fill_(mask, -1e9)
-        self_attn_output = self.decoder_multi_attention(None, decoder_input)
+        self_attn_output = self.decoder_multi_attention(mask, decoder_input)
         self_layer_output = self.layer_norm1(self_attn_output + decoder_input)
         attn_output = self.en_de_multi_attention(None, encoder_output, self_layer_output)
         layer_output = self.layer_norm2(attn_output + self_layer_output)
