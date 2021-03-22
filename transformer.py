@@ -77,13 +77,14 @@ class EncoderLayer(nn.Module, ABC):
             nn.ReLU(),
             nn.Linear(forward_dim, data_dim, bias=False),
         )
-        self.layer_norm = nn.LayerNorm(data_dim, elementwise_affine=False)
+        self.layer_norm1 = nn.LayerNorm(data_dim)
+        self.layer_norm2 = nn.LayerNorm(data_dim)
 
     def forward(self, encoder_input):
         attn_output = self.encoder_multi_attention(None, encoder_input)
-        layer_output = self.layer_norm(encoder_input + attn_output)
+        layer_output = self.layer_norm1(encoder_input + attn_output)
         feed_output = self.feedforward(layer_output)
-        encoder_output = self.layer_norm(layer_output + feed_output)
+        encoder_output = self.layer_norm2(layer_output + feed_output)
 
         return encoder_output
 
@@ -98,15 +99,18 @@ class DecoderLayer(nn.Module, ABC):
             nn.ReLU(),
             nn.Linear(forward_dim, data_dim, bias=False),
         )
-        self.layer_norm = nn.LayerNorm(data_dim, elementwise_affine=False)
+        self.layer_norm1 = nn.LayerNorm(data_dim)
+        self.layer_norm2 = nn.LayerNorm(data_dim)
+        self.layer_norm3 = nn.LayerNorm(data_dim)
 
     def forward(self, encoder_output, decoder_input, mask):
-        self_attn_output = self.decoder_multi_attention(mask, decoder_input)
-        self_layer_output = self.layer_norm(self_attn_output + decoder_input)
+        decoder_input.masked_fill_(mask, -1e9)
+        self_attn_output = self.decoder_multi_attention(None, decoder_input)
+        self_layer_output = self.layer_norm1(self_attn_output + decoder_input)
         attn_output = self.en_de_multi_attention(None, encoder_output, self_layer_output)
-        layer_output = self.layer_norm(attn_output + self_layer_output)
+        layer_output = self.layer_norm2(attn_output + self_layer_output)
         feed_output = self.feedforward(layer_output)
-        decoder_output = self.layer_norm(layer_output + feed_output)
+        decoder_output = self.layer_norm3(layer_output + feed_output)
 
         return decoder_output
 
