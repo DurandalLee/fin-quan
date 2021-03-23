@@ -123,8 +123,9 @@ class Transformer(nn.Module, ABC):
         self.encoder_layers = nn.ModuleList([
             EncoderLayer(data_size, kq_dim, v_dim, en_head, forward_dim) for _ in range(en_layer)
         ])
+        self.decoder_mask_layers = DecoderLayer(data_size, kq_dim, v_dim, de_head, forward_dim)
         self.decoder_layers = nn.ModuleList([
-            DecoderLayer(data_size, kq_dim, v_dim, de_head, forward_dim) for _ in range(de_layer)
+            DecoderLayer(data_size, kq_dim, v_dim, de_head, forward_dim) for _ in range(de_layer - 1)
         ])
         self.fully_con = nn.Linear(data_size, data_size, bias=False)
 
@@ -141,8 +142,9 @@ class Transformer(nn.Module, ABC):
             en_input = layer(en_input)
         en_output = en_input
 
+        de_input = self.decoder_mask_layers(en_output, de_input, decoder_mask)
         for layer in self.decoder_layers:
-            de_input = layer(en_output, de_input, decoder_mask)
+            de_input = layer(en_output, de_input, None)
 
         de_output = self.fully_con(de_input).reshape(-1, de_input.size(-1))
         de_output = nn.Softmax(dim=-1)(de_output)
